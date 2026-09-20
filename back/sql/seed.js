@@ -1,6 +1,6 @@
 // Remplit la base avec des données de démo fictives (npm run seed, depuis back/).
 // Attention : vide toutes les tables.
-require('dotenv').config(); // avant le require du pool
+if (require.main === module) require('dotenv').config(); // avant le require du pool (les tests chargent le leur)
 const bcrypt = require('bcryptjs');
 const pool = require('../src/db');
 
@@ -208,7 +208,7 @@ const inserer = async (cx, table, ligne) => {
   return res.insertId;
 };
 
-async function main() {
+async function seed() {
   const hash = await bcrypt.hash(MOT_DE_PASSE_DEMO, 10);
   const cx = await pool.getConnection();
   try {
@@ -291,18 +291,27 @@ async function main() {
     }
 
     await cx.commit();
-    console.log(`Seed terminé : ${Object.keys(PRATICIENS).length} praticiens, ${PATIENTS.length} patients.`);
-    console.log(`Mot de passe de tous les comptes de démo : ${MOT_DE_PASSE_DEMO}`);
+    return { praticiens: Object.keys(PRATICIENS).length, patients: PATIENTS.length };
   } catch (e) {
     await cx.rollback();
     throw e;
   } finally {
     cx.release();
-    await pool.end();
   }
 }
 
-main().catch((e) => {
-  console.error('Échec du seed :', e.message);
-  process.exit(1);
-});
+module.exports = { seed, MOT_DE_PASSE_DEMO };
+
+// npm run seed
+if (require.main === module) {
+  seed()
+      .then(({ praticiens, patients }) => {
+        console.log(`Seed terminé : ${praticiens} praticiens, ${patients} patients.`);
+        console.log(`Mot de passe de tous les comptes de démo : ${MOT_DE_PASSE_DEMO}`);
+      })
+      .catch((e) => {
+        console.error('Échec du seed :', e.message);
+        process.exitCode = 1;
+      })
+      .finally(() => pool.end());
+}
