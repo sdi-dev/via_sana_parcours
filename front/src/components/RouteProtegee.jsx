@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '@auth/AuthContext';
 
 // Laisse passer uniquement un utilisateur connecté (et du bon rôle, si précisé)
 export default function RouteProtegee({ role }) {

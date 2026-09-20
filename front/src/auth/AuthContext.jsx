@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { appeler, jeton } from '../api';
+import { appeler, jeton } from '@api';
 
 const AuthContext = createContext(null);
 

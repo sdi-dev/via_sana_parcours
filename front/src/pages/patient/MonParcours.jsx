@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
-import { appeler } from '../../api';
-import { dateHeure, dateSeule } from '../../format';
-import EtapesParcours from '../../components/fiche/EtapesParcours';
-import InfosFormulaire from '../../components/fiche/InfosFormulaire';
-import NotesSuivi from '../../components/fiche/NotesSuivi';
-import Seances from '../../components/fiche/Seances';
+import { appeler } from '@api';
+import { dateCourte, dateSeule, heure } from '@utils/dateFormat.js';
+import Bande from '@components/Bande';
+import Carte from '@components/Carte';
+import EtapesParcours from '@components/fiche/EtapesParcours';
+import InfosFormulaire from '@components/fiche/InfosFormulaire';
+import NotesSuivi from '@components/fiche/NotesSuivi';
+import Seances from '@components/fiche/Seances';
+import Pastille from '@components/Pastille';
+import Tuile from '@components/Tuile';
 
 export default function MonParcours() {
   const [dossier, setDossier] = useState(null);
@@ -14,72 +18,67 @@ export default function MonParcours() {
     appeler('/moi/dossier').then(setDossier).catch((e) => setErreur(e.message));
   }, []);
 
-  if (erreur) return <div role="alert" className="alert alert-error">{erreur}</div>;
-  if (!dossier) return <p role="status">Chargement…</p>;
+  if (erreur) return <Bande ton="creme"><div role="alert" className="alert alert-error">{erreur}</div></Bande>;
+  if (!dossier) return <Bande ton="creme"><p role="status">Chargement…</p></Bande>;
 
   const total = dossier.etapes.length;
   const realisees = dossier.etapes.filter((e) => e.statut === 'realisee').length;
   const prochaine = dossier.seancesAVenir[0];
-  const questionnaire = <InfosFormulaire questionnaire={dossier.questionnaire} vuePatient />;
+  const questionnaire = <InfosFormulaire questionnaire={dossier.questionnaire} patient={dossier} vuePatient />;
 
   return (
-      <div className="flex flex-col gap-4">
-        <header className="card bg-base-100 shadow-sm">
-          <div className="card-body">
-            <h1 className="text-2xl font-semibold">Mon parcours</h1>
-            <p className="font-texte">Bonjour {dossier.prenom}, voici où vous en êtes dans votre parcours <strong>{dossier.parcours}</strong>.</p>
-            {dossier.objectif && (
-                <p className="font-texte">
-                  <span className="font-medium">Votre objectif :</span> {dossier.objectif}
-                  {dossier.dateCible && ` (échéance : ${dateSeule(dossier.dateCible)})`}
-                </p>
-            )}
-            <div className="flex flex-wrap items-center gap-3">
-              <progress className="progress progress-primary w-48" value={realisees} max={total} aria-label="Progression dans le parcours" />
-              <span>{realisees} étape{realisees > 1 ? 's' : ''} sur {total} réalisée{realisees > 1 ? 's' : ''}</span>
-            </div>
-          </div>
-        </header>
+    <>
+      <Bande ton="creme">
+        <Pastille>Votre suivi · PrépaMarathon</Pastille>
+        <h1 className="titre-hero mt-4">Mon <em>parcours</em></h1>
+        <p className="chapo mt-5 font-texte">
+          Bonjour {dossier.prenom}, voici où vous en êtes dans votre parcours <strong>{dossier.parcours}</strong>.
+        </p>
+        {dossier.objectif && (
+          <p className="chapo mt-2 font-texte">
+            <span className="font-medium">Votre objectif :</span> {dossier.objectif}
+            {dossier.dateCible && ` (échéance : ${dateSeule(dossier.dateCible)})`}
+          </p>
+        )}
 
-        <section className="card bg-base-100 shadow-sm">
-          <div className="card-body">
-            <h2 className="card-title">Prochaine séance</h2>
-            {prochaine ? (
-                <p>
-                  <span className="font-medium">{dateHeure(prochaine.dateHeure)}</span>
-                  <br />
-                  avec {prochaine.praticienPrenom} {prochaine.praticienNom} ({prochaine.praticienSpecialite})
-                  {prochaine.etape && ` · ${prochaine.etape}`}
-                </p>
-            ) : (
-                <p>Aucune séance n&apos;est prévue pour le moment.</p>
-            )}
-          </div>
-        </section>
+        <div className="mt-8 flex flex-wrap gap-5">
+          <Tuile ton="orange" valeur={`${realisees}/${total}`} libelle="étapes réalisées" inclinaison={-2} />
+          <Tuile ton="vert" valeur={prochaine ? dateCourte(prochaine.dateHeure) : '—'}
+            libelle={prochaine ? `prochaine séance · ${heure(prochaine.dateHeure)}` : 'aucune séance prévue'} inclinaison={1.5} />
+          <Tuile ton="bleu" valeur={dossier.praticiens.length} libelle="praticiens dans votre équipe" inclinaison={-1} />
+        </div>
 
-        {!dossier.questionnaire && questionnaire}
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <progress className="progress progress-primary w-48" value={realisees} max={total} aria-label="Progression dans le parcours" />
+          <span>{realisees} étape{realisees > 1 ? 's' : ''} sur {total} réalisée{realisees > 1 ? 's' : ''}</span>
+        </div>
+      </Bande>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="flex flex-col gap-4 lg:col-span-2">
-            <EtapesParcours etapes={dossier.etapes} />
+      {!dossier.questionnaire && <Bande ton="bleu">{questionnaire}</Bande>}
+
+      <Bande ton="vert">
+        <EtapesParcours etapes={dossier.etapes} />
+      </Bande>
+
+      <Bande ton="sable">
+        <div className="grid items-start gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2">
             <NotesSuivi notes={dossier.notes} />
           </div>
-          <div className="flex flex-col gap-4">
-            <section className="card bg-base-100 shadow-sm">
-              <div className="card-body">
-                <h2 className="card-title">Votre équipe</h2>
-                <ul>
-                  {dossier.praticiens.map((p) => (
-                      <li key={p.id}>{p.prenom} {p.nom} <span className="opacity-70">· {p.specialite}</span></li>
-                  ))}
-                </ul>
-              </div>
-            </section>
+          <div className="flex flex-col gap-8">
+            <Carte titre="Votre équipe" variante="sombre">
+              <ul className="liste-puces">
+                {dossier.praticiens.map((p) => (
+                  <li key={p.id}>{p.prenom} {p.nom} <span className="opacity-70">· {p.specialite}</span></li>
+                ))}
+              </ul>
+            </Carte>
             <Seances aVenir={dossier.seancesAVenir} passees={dossier.seancesPassees} />
           </div>
         </div>
+      </Bande>
 
-        {dossier.questionnaire && questionnaire}
-      </div>
+      {dossier.questionnaire && <Bande ton="bleu">{questionnaire}</Bande>}
+    </>
   );
 }

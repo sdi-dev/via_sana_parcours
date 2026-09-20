@@ -1,11 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router';
-import Layout from './components/Layout';
-import RouteProtegee from './components/RouteProtegee';
-import Accueil from './pages/Accueil';
-import Connexion from './pages/Connexion';
-import FichePatient from './pages/praticien/FichePatient';
-import ListePatients from './pages/praticien/ListePatients';
-import MonParcours from './pages/patient/MonParcours';
+import Layout from '@components/Layout';
+import RouteProtegee from '@components/RouteProtegee';
+import Accueil from '@pages/Accueil';
+import Connexion from '@pages/Connexion';
+import FichePatient from '@pages/praticien/FichePatient';
+import ListePatients from '@pages/praticien/ListePatients';
+import MonParcours from '@pages/patient/MonParcours';
 
 export default function App() {
     return (

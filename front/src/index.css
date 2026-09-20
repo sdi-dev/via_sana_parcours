@@ -1,57 +1,335 @@
 @import "tailwindcss";
 
 @plugin "daisyui" {
-    themes: light, dark;
+  themes: light, dark;
 }
 
 /* Thème aux couleurs de PrépaMarathon (palette fournie) */
 @plugin "daisyui/theme" {
-    name: "prepamarathon";
-    default: true;
-    color-scheme: light;
+  name: "prepamarathon";
+  default: true;
+  color-scheme: light;
 
-    --color-base-100: #ffffff;
-    --color-base-200: #f7f1e8;
-    --color-base-300: #efe6d8;
-    --color-base-content: #262626;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f1e8;
+  --color-base-300: #efe6d8;
+  --color-base-content: #262626;
 
-    --color-primary: #ec6e48;
-    --color-primary-content: #262626;
-    --color-secondary: #1e3732;
-    --color-secondary-content: #f7f1e8;
-    --color-accent: #afbfe5;
-    --color-accent-content: #262626;
-    --color-neutral: #2a473f;
-    --color-neutral-content: #f7f1e8;
+  --color-primary: #ec6e48;
+  --color-primary-content: #262626;
+  --color-secondary: #2a473f;
+  --color-secondary-content: #f7f1e8;
+  --color-accent: #afbfe5;
+  --color-accent-content: #262626;
+  --color-neutral: #1e3732;
+  --color-neutral-content: #f7f1e8;
 
-    --color-info: #afbfe5;
-    --color-info-content: #262626;
-    --color-success: #2a473f;
-    --color-success-content: #f7f1e8;
-    --color-warning: #ec6e48;
-    --color-warning-content: #262626;
-    --color-error: #b3261e;
-    --color-error-content: #ffffff;
+  --color-info: #afbfe5;
+  --color-info-content: #262626;
+  --color-success: #2a473f;
+  --color-success-content: #f7f1e8;
+  --color-warning: #ec6e48;
+  --color-warning-content: #262626;
+  --color-error: #b3261e;
+  --color-error-content: #ffffff;
 
-    --radius-selector: 1rem;
-    --radius-field: 0.375rem;
-    --radius-box: 0.5rem;
-    --size-selector: 0.25rem;
-    --size-field: 0.25rem;
-    --border: 1px;
-    --depth: 0;
-    --noise: 0;
+  /* Orange assombri pour le texte : #ec6e48 sur fond clair n'atteint pas 4,5 de contraste */
+  --texte-accent: #b93a13;
+  --accent-sur-sombre: #ec6e48;
+  --couleur-logo-pied: #ec6e48;
+
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
 }
 
 @theme {
-    --font-sans: Verdana, Geneva, sans-serif;
-    --font-titre: "Oswald Variable", Oswald, "Arial Narrow", sans-serif;
-    --font-texte: "Libre Baskerville Variable", "Libre Baskerville", Georgia, serif;
+  --font-sans: Verdana, Geneva, sans-serif;
+  --font-titre: "Oswald Variable", Oswald, "Arial Narrow", sans-serif;
+  --font-texte: "Libre Baskerville Variable", "Libre Baskerville", Georgia, serif;
 }
 
 @layer base {
-    h1, h2 {
-        font-family: var(--font-titre);
-        letter-spacing: 0.02em;
+  [data-theme="light"], [data-theme="dark"] {
+    --texte-accent: var(--color-primary);
+    --couleur-logo-pied: currentColor;
+  }
+  [data-theme="light"] { --accent-sur-sombre: var(--color-accent); }
+  [data-theme="dark"] { --accent-sur-sombre: var(--color-primary); }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-titre);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1.05;
+    font-weight: 700;
+  }
+
+  /* Mot mis en valeur : italique serif, comme sur le site PrépaMarathon */
+  h1 em, h2 em, h3 em {
+    font-family: var(--font-texte);
+    font-style: italic;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--texte-accent);
+  }
+
+  /* Focus clavier : contour foncé + liseré clair, lisible sur fond clair comme sombre */
+  :focus-visible {
+    outline: 3px solid var(--color-base-content);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-base-100);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
+  }
+}
+
+@layer components {
+  /* Bandes pleine largeur, comme les sections de la page d'accueil */
+  .conteneur { max-width: 72rem; margin-inline: auto; padding-inline: 1rem; }
+  .bande { padding-block: 3rem; }
+  .bande-creme { background: var(--color-base-200); color: var(--color-base-content); }
+  .bande-sable { background: var(--color-base-300); color: var(--color-base-content); }
+  .bande-bleu { background: var(--color-accent); color: var(--color-accent-content); }
+  .bande-vert { background: var(--color-neutral); color: var(--color-neutral-content); }
+  .bande-bleu h1 em, .bande-bleu h2 em { color: var(--color-accent-content); }
+  .bande-vert h1 em, .bande-vert h2 em { color: var(--accent-sur-sombre); }
+
+  .titre-hero { font-size: clamp(2.5rem, 7vw, 4.75rem); }
+  .titre-section { font-size: clamp(1.75rem, 4vw, 2.75rem); }
+  .titre-carte { font-size: 1.05rem; letter-spacing: 0.08em; margin-bottom: 1rem; }
+  .chapo { font-size: 1rem; max-width: 42rem; }
+
+  /* Cartes : contour foncé et ombre décalée */
+  .carte {
+    background: var(--color-base-100);
+    color: var(--color-base-content);
+    border: 2px solid var(--color-base-content);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: 6px 6px 0 var(--color-base-content);
+  }
+  .carte-sombre {
+    background: var(--color-neutral);
+    color: var(--color-neutral-content);
+    border-color: var(--color-neutral);
+    box-shadow: 6px 6px 0 var(--color-primary);
+  }
+
+  /* Petites étiquettes en capitales espacées */
+  .pastille {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 9999px;
+    padding: 0.3rem 0.9rem;
+    font-family: var(--font-titre);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: var(--color-accent);
+    color: var(--color-accent-content);
+  }
+  .pastille-sombre { background: var(--color-neutral); color: var(--color-neutral-content); }
+  .pastille-orange { background: var(--color-primary); color: var(--color-primary-content); }
+
+  /* Tuiles de chiffres, légèrement inclinées */
+  .tuile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    min-width: 9.5rem;
+    padding: 1rem 1.5rem;
+    border-radius: 1.25rem;
+    text-align: left;
+    transform: rotate(var(--rot, 0deg));
+  }
+  .tuile-valeur { font-family: var(--font-titre); font-size: 2.75rem; line-height: 1; font-weight: 700; }
+  .tuile-libelle { font-size: 0.8rem; }
+  .tuile-orange { background: var(--color-primary); color: var(--color-primary-content); }
+  .tuile-vert { background: var(--color-neutral); color: var(--color-neutral-content); }
+  .tuile-vert .tuile-valeur { color: var(--color-accent); }
+  .tuile-bleu { background: var(--color-accent); color: var(--color-accent-content); }
+  .tuile-blanche { background: var(--color-base-100); color: var(--color-base-content); border: 2px solid var(--color-base-content); }
+  button.tuile { cursor: pointer; }
+  button.tuile[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--color-base-100), 0 0 0 6px var(--color-base-content); }
+
+  /* Étapes du parcours : cartes numérotées en chiffres creux */
+  .grille-etapes { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); list-style: none; padding: 0; }
+  .etape-carte {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    border-radius: 1.5rem;
+    background: color-mix(in oklab, var(--color-neutral) 86%, white);
+    border: 1px solid color-mix(in oklab, var(--color-neutral-content) 18%, transparent);
+    transform: rotate(var(--rot, 0deg));
+  }
+  .etape-active { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+  /* Chiffre décoratif : dans un pseudo-élément, donc absent du texte lu et du calcul de contraste */
+  .numero-contour { display: block; height: 3.5rem; }
+  .numero-contour::before {
+    content: attr(data-numero);
+    font-family: var(--font-titre);
+    font-size: 3.5rem;
+    line-height: 1;
+    font-weight: 700;
+    color: transparent;
+    -webkit-text-stroke: 2px var(--color-accent);
+  }
+  .titre-etape { font-size: 1.1rem; letter-spacing: 0.05em; }
+  .texte-etape { font-size: 0.85rem; opacity: 0.85; min-height: 1.25rem; }
+
+  /* Statuts : symbole + libellé, jamais la couleur seule */
+  .statut {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 9999px;
+    padding: 0.15rem 0.75rem;
+    border: 1.5px solid transparent;
+    font-family: var(--font-titre);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .statut-realise { background: var(--color-accent); color: var(--color-accent-content); }
+  .statut-en-cours { background: var(--color-primary); color: var(--color-primary-content); }
+  .statut-a-venir { border-color: currentColor; background: transparent; }
+
+  .liste-puces { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+  .liste-puces li::before {
+    content: "";
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    margin-right: 0.7rem;
+    border-radius: 0.15rem;
+    background: var(--color-primary);
+  }
+
+  .logo { font-family: var(--font-titre); font-weight: 700; font-size: 1.35rem; letter-spacing: 0.03em; text-transform: uppercase; }
+  .logo span { color: var(--texte-accent); }
+  .logo-pied span { color: var(--couleur-logo-pied); }
+  .contour-decoratif { user-select: none; pointer-events: none; }
+  .contour-decoratif::before {
+    content: attr(data-mot);
+    font-family: var(--font-titre);
+    font-weight: 700;
+    line-height: 0.9;
+    color: transparent;
+    -webkit-text-stroke: 2px color-mix(in oklab, var(--color-primary) 55%, transparent);
+  }
+
+  /* Boutons en pilule, capitales Oswald */
+  .btn {
+    border-radius: 9999px;
+    font-family: var(--font-titre);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  /* En-têtes de tableau colorés, aux couleurs de la marque */
+  .table thead th {
+    font-family: var(--font-titre);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.75rem;
+    background: var(--color-neutral);
+    color: var(--color-neutral-content);
+    padding-block: 0.85rem;
+  }
+  .table thead th:first-child { border-top-left-radius: 0.9rem; border-bottom-left-radius: 0.9rem; }
+  .table thead th:last-child { border-top-right-radius: 0.9rem; border-bottom-right-radius: 0.9rem; }
+
+  /* Lignes cliquables : le lien du nom couvre toute la ligne (clic, clic milieu et clavier natifs) */
+  .table-clic tbody tr { position: relative; cursor: pointer; transition: background-color 0.15s ease; }
+  .table-clic tbody tr:hover,
+  .table-clic tbody tr:focus-within { background: color-mix(in oklab, var(--color-primary) 12%, var(--color-base-100)); }
+  .table-clic tbody tr:focus-within { outline: 3px solid var(--color-base-content); outline-offset: -3px; }
+  .lien-ligne::after { content: ""; position: absolute; inset: 0; }
+  .fleche-ligne {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    background: var(--color-neutral);
+    color: var(--color-neutral-content);
+    font-family: var(--font-titre);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .table-clic tbody tr:hover .fleche-ligne,
+  .table-clic tbody tr:focus-within .fleche-ligne { background: var(--color-primary); color: var(--color-primary-content); }
+
+  /* Tableau des patients : une carte par ligne sur petit écran */
+  @media (max-width: 47.99rem) {
+    .table-empile thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .table-empile, .table-empile tbody, .table-empile tr, .table-empile td { display: block; }
+    .table-empile tr { padding: 1rem 0; border-bottom: 1px solid var(--color-base-300); }
+    .table-empile td { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; border: 0; }
+    .table-empile td::before {
+      content: attr(data-label);
+      flex: none;
+      font-family: var(--font-titre);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+    .table-empile tr { position: relative; }
+    .table-empile td:first-child { display: block; padding-right: 6rem; }
+    .table-empile td:first-child::before { content: none; }
+    .table-empile td.cellule-fleche { position: absolute; top: 1rem; right: 0; padding: 0; }
+    .table-empile td.cellule-fleche::before { content: none; }
+  }
+}
+
+/* Hors des couches : prend le pas sur les variables du thème sombre de daisyUI.
+   Primaire éclairci pour que pastilles et boutons atteignent 4,5 de contraste. */
+:root[data-theme="dark"] {
+  --color-primary: #8b89ff;
+  --color-primary-content: #09090b;
+}
+
+/* Bordures de champs assez contrastées (3:1 minimum pour les composants d'interface) */
+input.input, select.select, textarea.textarea, input.checkbox {
+  border-color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+}
+
+/* Un peu de vie, sans excès : apparition douce, point « en cours » qui pulse, appui sur les boutons.
+   Tout est désactivé si l'utilisateur demande moins d'animations. */
+@keyframes apparition {
+  from { opacity: 0; translate: 0 10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes pulsation {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .carte, .tuile, .etape-carte { animation: apparition 0.45s ease-out both; }
+  .tuile:nth-child(2), .etape-carte:nth-child(2) { animation-delay: 0.06s; }
+  .tuile:nth-child(3), .etape-carte:nth-child(3) { animation-delay: 0.12s; }
+  .tuile:nth-child(4), .etape-carte:nth-child(4) { animation-delay: 0.18s; }
+  .etape-carte:nth-child(5) { animation-delay: 0.24s; }
+  .statut-en-cours > span[aria-hidden="true"] { animation: pulsation 1.8s ease-in-out infinite; }
+  .btn { transition: transform 0.1s ease; }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
 }

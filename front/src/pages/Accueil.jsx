@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '@auth/AuthContext';
 
 // Aiguille l'utilisateur vers son espace selon son rôle
 export default function Accueil() {
