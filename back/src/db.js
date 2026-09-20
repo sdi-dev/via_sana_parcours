@@ -11,4 +11,6 @@ module.exports = mysql.createPool({
     ssl: { ca: fs.readFileSync(path.join(__dirname, '../certs/ca.pem')) },
     waitForConnections: true,
     connectionLimit: 5,
+    timezone: 'Z',
+    dateStrings: ['DATE'],
 });
