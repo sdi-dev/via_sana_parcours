@@ -1,3 +1,4 @@
+import { Eye, Lock } from 'lucide-react';
 import { useState } from 'react';
 import { dateHeure } from '@utils/dateFormat.js';
 import Carte from '@components/Carte';
@@ -43,7 +44,8 @@ export default function NotesSuivi({ notes, editable = false, occupe = false, on
                 <span className="font-medium">{n.auteurPrenom} {n.auteurNom}</span>
                 <span className="opacity-70">· {n.auteurSpecialite} · {dateHeure(n.dateCreation)}</span>
                 {editable && (
-                  <span className="badge badge-outline badge-sm">
+                  <span className={`badge badge-sm gap-1 ${n.visiblePatient ? 'badge-success' : 'badge-warning'}`}>
+                    {n.visiblePatient ? <Eye size={12} aria-hidden="true" /> : <Lock size={12} aria-hidden="true" />}
                     {n.visiblePatient ? 'Partagée avec le patient' : 'Privée'}
                   </span>
                 )}

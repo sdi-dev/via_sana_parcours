@@ -1,6 +1,7 @@
+import { MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router';
-import { useAuth } from '@auth/AuthContext';
+import { useAuth } from '@auth/useAuth';
 import Bande from '@components/Bande';
 import Carte from '@components/Carte';
 import { EnTete, PiedDePage } from '@components/Layout';
@@ -39,8 +40,8 @@ export default function Connexion() {
         <Bande ton="creme" className="relative overflow-hidden">
           <span aria-hidden="true" className="contour-decoratif absolute -right-6 top-4 hidden text-[10rem] md:block">Parcours</span>
           <div className="relative grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <Pastille>Suivi de parcours · Paris</Pastille>
+            <div className="cascade">
+              <Pastille icone={MapPin}>Suivi de parcours · Paris</Pastille>
               <h1 className="titre-hero mt-4">Accédez à votre <em>suivi</em></h1>
               <p className="chapo mt-5 font-texte">
                 Un dossier unique, une équipe coordonnée. Retrouvez vos étapes, vos séances et les messages de vos praticiens.

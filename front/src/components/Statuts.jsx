@@ -1,25 +1,28 @@
-// Le statut n'est jamais porté par la couleur seule : symbole + libellé
+import { Circle, CircleCheck, CircleDot, CirclePlay } from 'lucide-react';
+import { libelleStatutPatient } from '@utils/statuts.js';
+
+// Le statut n'est jamais porté par la couleur seule : icône + libellé
 const ETAPE = {
-  realisee: { symbole: '✓', libelle: 'Réalisée', classe: 'statut-realise' },
-  en_cours: { symbole: '●', libelle: 'En cours', classe: 'statut-en-cours' },
-  a_venir: { symbole: '○', libelle: 'À venir', classe: 'statut-a-venir' },
+  realisee: { icone: CircleCheck, libelle: 'Réalisée', classe: 'statut-realise' },
+  en_cours: { icone: CircleDot, libelle: 'En cours', classe: 'statut-en-cours' },
+  a_venir: { icone: Circle, libelle: 'À venir', classe: 'statut-a-venir' },
 };
 
 const PATIENT = {
-  a_demarrer: { symbole: '○', libelle: 'À démarrer', classe: 'statut-a-venir' },
-  en_cours: { symbole: '●', libelle: 'En cours', classe: 'statut-en-cours' },
-  termine: { symbole: '✓', libelle: 'Terminé', classe: 'statut-realise' },
+  a_demarrer: { icone: CirclePlay, libelle: libelleStatutPatient('a_demarrer'), classe: 'statut-a-venir' },
+  en_cours: { icone: CircleDot, libelle: libelleStatutPatient('en_cours'), classe: 'statut-en-cours' },
+  termine: { icone: CircleCheck, libelle: libelleStatutPatient('termine'), classe: 'statut-realise' },
 };
 
-function Pastille({ definition }) {
+function Statut({ definition }) {
+  const Icone = definition.icone;
   return (
     <span className={`statut ${definition.classe}`}>
-      <span aria-hidden="true">{definition.symbole}</span>
+      <span aria-hidden="true" className="inline-flex"><Icone size={14} strokeWidth={2.5} /></span>
       {definition.libelle}
     </span>
   );
 }
 
-export const StatutEtape = ({ statut }) => <Pastille definition={ETAPE[statut]} />;
-export const StatutPatient = ({ statut }) => <Pastille definition={PATIENT[statut]} />;
-export const libelleStatutPatient = (statut) => PATIENT[statut].libelle;
+export const StatutEtape = ({ statut }) => <Statut definition={ETAPE[statut]} />;
+export const StatutPatient = ({ statut }) => <Statut definition={PATIENT[statut]} />;

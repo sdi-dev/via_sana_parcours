@@ -1,8 +1,23 @@
+import { CalendarCheck, CalendarClock, CalendarX } from 'lucide-react';
 import { useState } from 'react';
 import { dateHeure } from '@utils/dateFormat.js';
 import Carte from '@components/Carte';
 
-const STATUT_SEANCE = { prevue: 'Prévue', realisee: 'Réalisée', annulee: 'Annulée' };
+const STATUT_SEANCE = {
+  prevue: { libelle: 'Prévue', icone: CalendarClock, classe: 'badge-info' },
+  realisee: { libelle: 'Réalisée', icone: CalendarCheck, classe: 'badge-success' },
+  annulee: { libelle: 'Annulée', icone: CalendarX, classe: 'badge-error' },
+};
+
+function BadgeSeance({ statut }) {
+  const { libelle, icone: Icone, classe } = STATUT_SEANCE[statut] ?? { libelle: statut, icone: CalendarClock, classe: 'badge-ghost' };
+  return (
+    <span className={`badge badge-sm ml-1 gap-1 ${classe}`}>
+      <Icone size={12} aria-hidden="true" />
+      {libelle}
+    </span>
+  );
+}
 
 function Ligne({ seance }) {
   return (
@@ -65,7 +80,7 @@ export default function Seances({ aVenir, passees, etapes = [], editable = false
             {passees.map((s) => (
               <li key={s.id} className="py-2">
                 <p className="font-medium">
-                  {dateHeure(s.dateHeure)} <span className="badge badge-ghost badge-sm ml-1">{STATUT_SEANCE[s.statut]}</span>
+                  {dateHeure(s.dateHeure)} <BadgeSeance statut={s.statut} />
                 </p>
                 <p className="text-sm opacity-70">
                   {s.praticienPrenom} {s.praticienNom} · {s.praticienSpecialite}{s.etape ? ` · ${s.etape}` : ''}

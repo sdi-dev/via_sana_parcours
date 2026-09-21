@@ -180,7 +180,7 @@ router.get('/moi/dossier', patientSeulement, route(async (req, res) => {
 }));
 
 // ---------------------------------------------------------------------
-// Changement de statut d'une étape : a_venir -> en_cours -> realisee
+// Changement de statut d'une étape : a_venir -> en_cours -> realisee (réservé à la spécialité attendue)
 // Terminer une étape démarre la suivante. Une seule étape en cours à la fois.
 // ---------------------------------------------------------------------
 router.patch('/patients/:id/etapes/:idEtape', praticienSeulement, route(async (req, res) => {
@@ -195,13 +195,20 @@ router.patch('/patients/:id/etapes/:idEtape', praticienSeulement, route(async (r
   try {
     await cx.beginTransaction();
     const [lignes] = await cx.query(
-      `SELECT av.statut, e.position, e.id_parcours AS idParcours
+      `SELECT av.statut, e.position, e.id_parcours AS idParcours, e.specialite_attendue AS specialiteAttendue
          FROM avancement av JOIN etape e ON e.id_etape = av.id_etape
         WHERE av.id_patient = ? AND av.id_etape = ? FOR UPDATE`, [idPatient, idEtape]);
     const etape = lignes[0];
     if (!etape) {
       await cx.rollback();
       return res.status(404).json({ erreur: 'Étape introuvable pour ce patient' });
+    }
+
+    // Un praticien n'agit que sur les étapes de sa spécialité (une étape sans spécialité attendue est ouverte à tous)
+    const [[praticien]] = await cx.query('SELECT specialite FROM praticien WHERE id_utilisateur = ?', [req.utilisateur.id]);
+    if (etape.specialiteAttendue && etape.specialiteAttendue !== praticien?.specialite) {
+      await cx.rollback();
+      return res.status(403).json({ erreur: `Cette étape est réservée : ${etape.specialiteAttendue}` });
     }
 
     const autorisee = (etape.statut === 'a_venir' && statut === 'en_cours')

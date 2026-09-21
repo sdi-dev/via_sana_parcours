@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { appeler } from '@api';
-import { useAuth } from '@auth/AuthContext';
+import { useAuth } from '@auth/useAuth';
+import Chargement from '@components/Chargement';
 
 // Coordonnées de tous les praticiens, pour se contacter directement
 export default function AnnuairePraticiens() {
@@ -18,7 +19,7 @@ export default function AnnuairePraticiens() {
       <p className="chapo mb-6 font-texte">Contactez directement les praticiens qui suivent vos patients.</p>
 
       {erreur && <div role="alert" className="alert alert-error">{erreur}</div>}
-      {!praticiens && !erreur && <p role="status" className="min-h-48">Chargement…</p>}
+      {!praticiens && !erreur && <Chargement className="min-h-48" />}
 
       {praticiens && (
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

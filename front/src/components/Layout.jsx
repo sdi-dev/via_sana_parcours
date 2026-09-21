@@ -1,5 +1,8 @@
-import { Link, Outlet } from 'react-router';
-import { useAuth } from '@auth/AuthContext';
+import { Stethoscope, User } from 'lucide-react';
+import { Link, Outlet, useLocation } from 'react-router';
+import { useAuth } from '@auth/useAuth';
+import Chargement from '@components/Chargement';
+import Pastille from '@components/Pastille';
 import SelecteurTheme from '@components/SelecteurTheme';
 
 export function EnTete() {
@@ -14,7 +17,9 @@ export function EnTete() {
           {utilisateur && (
             <>
               <span>{utilisateur.prenom} {utilisateur.nom}</span>
-              <span className="pastille">{utilisateur.role === 'praticien' ? 'Praticien' : 'Patient'}</span>
+              <Pastille icone={utilisateur.role === 'praticien' ? Stethoscope : User}>
+                {utilisateur.role === 'praticien' ? 'Praticien' : 'Patient'}
+              </Pastille>
               <button type="button" className="btn btn-sm btn-neutral" onClick={deconnexion}>Se déconnecter</button>
             </>
           )}
@@ -40,21 +45,25 @@ export function PiedDePage() {
 
 export default function Layout() {
   const { chargement } = useAuth();
+  const { pathname } = useLocation();
 
   // Tant que la session n'est pas restaurée, on n'affiche ni en-tête ni pied de page :
   // l'ensemble apparaît d'un coup, sans décalage de mise en page
   if (chargement) {
-    return <p role="status" className="min-h-screen bg-base-200 p-8">Chargement…</p>;
+    return <Chargement plein />;
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-base-200">
+    <div className="layout-entree flex min-h-screen flex-col bg-base-200">
       <a href="#contenu" className="sr-only focus:not-sr-only focus:absolute focus:z-10 focus:m-2 focus:btn focus:btn-primary">
         Aller au contenu
       </a>
       <EnTete />
       <main id="contenu" className="min-h-screen flex-1">
-        <Outlet />
+        {/* La clé relance l'animation d'entrée à chaque changement de page */}
+        <div key={pathname} className="page-entree">
+          <Outlet />
+        </div>
       </main>
       <PiedDePage />
     </div>

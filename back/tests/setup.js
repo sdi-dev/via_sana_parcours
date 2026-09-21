@@ -5,3 +5,8 @@ require('./chargerEnv.js');
 afterAll(async () => {
   await require('../src/db').end();
 });
+
+// Chaque test repart sans échec de connexion enregistré
+beforeEach(() => {
+  require('../src/middlewares/limiteConnexion').reinitialiser();
+});

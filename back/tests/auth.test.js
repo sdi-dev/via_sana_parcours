@@ -92,6 +92,14 @@ describe('POST /api/login', () => {
 });
 
 describe('GET /api/session et validation du jeton', () => {
+  it('la spécialité est renvoyée pour un praticien (connexion et session), jamais pour un patient', async () => {
+    const sam = await connexion(PRATICIEN);
+    expect(sam.specialite).toBe('kinésithérapeute');
+    expect((await api().get('/api/session').set(sam.entetes)).body.specialite).toBe('kinésithérapeute');
+    const lea = await connexion(PATIENT);
+    expect(lea).not.toHaveProperty('specialite');
+  });
+
   it('renvoie l’utilisateur connecté', async () => {
     const u = await connexion(PATIENT);
     const r = await api().get('/api/session').set(u.entetes);

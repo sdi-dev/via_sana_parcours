@@ -15,7 +15,7 @@ Evalandgo (formulaire) ─ ─ ─ ─ ►  réponses récupérées, stockées e
 - **Un seul service** (Render) : Express sert l'API sous `/api` et le front compilé (`front/dist`).
 - **Deux rôles** : `praticien` et `patient`. Le rôle est porté par le jeton JWT et contrôlé à chaque requête.
 - **Données** : 100 % fictives, créées par le script `back/sql/seed.js`.
-- **Tests** : 147 tests automatisés sur le back, contre une base MySQL de test dédiée (voir §8).
+- **Tests** : 160 tests automatisés sur le back, contre une base MySQL de test dédiée (voir §8).
 
 ---
 
@@ -30,6 +30,7 @@ Evalandgo (formulaire) ─ ─ ─ ─ ►  réponses récupérées, stockées e
 | `src/db.js` | pool de connexions MySQL (TLS avec le certificat Aiven, dates en UTC) |
 | `src/routes/auth.js` | `POST /api/login`, `GET /api/session` |
 | `src/routes/patients.js` | parcours, praticiens, patients, dossier, étapes, séances, notes |
+| `src/middlewares/limiteConnexion.js` | limite des échecs de connexion (voir 2.2) |
 | `src/middlewares/auth.js` | `authentifier` (vérifie le jeton) et `exigerRole` (vérifie le rôle) |
 | `sql/schema.sql` | création des 10 tables et de leurs contraintes |
 | `sql/seed.js` | vide les tables puis insère les données de démonstration (exporte `seed()`, aussi utilisée par les tests) |
@@ -38,27 +39,29 @@ Evalandgo (formulaire) ─ ─ ─ ─ ►  réponses récupérées, stockées e
 ### 2.2 Authentification et droits
 
 1. Le front envoie l'e-mail et le mot de passe à `POST /api/login`.
-2. L'API cherche l'utilisateur (requête paramétrée), compare le mot de passe avec le hash **bcrypt**, puis renvoie un **jeton JWT** (algorithme HS256, valable **8 h**) contenant l'identifiant et le rôle.
+2. L'API vérifie la limite de tentatives (voir ci-dessous), cherche l'utilisateur (requête paramétrée), compare le mot de passe avec le hash **bcrypt**, puis renvoie un **jeton JWT** (HS256, **8 h**) contenant l'identifiant et le rôle.
 3. Le front joint ce jeton à chaque appel : `Authorization: Bearer <jeton>`.
-4. Les routes protégées passent par deux garde-fous :
-   - `authentifier` : jeton absent ou invalide → **401** ;
-   - `exigerRole('praticien')` ou `exigerRole('patient')` : mauvais rôle → **403**.
+4. Les routes protégées passent par deux garde-fous : `authentifier` (jeton absent ou invalide → **401**) et `exigerRole` (mauvais rôle → **403**).
 
-Le patient n'a **pas** besoin de fournir son identifiant : `GET /api/moi/dossier` utilise celui du jeton. Il ne peut donc pas consulter le dossier d'un autre patient.
+Le patient ne fournit jamais son identifiant : `GET /api/moi/dossier` utilise celui du jeton, il ne peut donc pas consulter le dossier d'un autre patient.
+
+**Limite de tentatives.** Après 3 échecs de connexion pour un même couple (IP, e-mail), la connexion est bloquée 5 minutes : réponse **429** avec l'en-tête `Retry-After`, même si le mot de passe fourni est correct. Les requêtes invalides (400) ne comptent pas, un e-mail inconnu est traité comme un e-mail connu, et une connexion réussie remet le compteur à zéro. L'état est en mémoire (remis à zéro au redémarrage) ; l'IP est lue derrière le proxy de Render (`trust proxy`).
+
+**Étapes réservées.** Un praticien ne peut démarrer ou terminer que les étapes dont la spécialité attendue est la sienne (kiné : bilan, plan d'action, analyse de foulée ; coordinateur : suivi coordonné). Une étape sans spécialité attendue (questionnaire) est ouverte à tous les praticiens.
 
 ### 2.3 Routes de l'API
 
 | Méthode et route | Qui | Entrée | Ce que ça renvoie |
 |---|---|---|---|
 | `GET /api/health` | public | rien | `{ "status": "ok" }` si la base répond, sinon 500 `{ "status": "db_error" }` |
-| `POST /api/login` | public | `{ email, motDePasse }` | `{ token, utilisateur: { id, role, prenom, nom } }` |
-| `GET /api/session` | connecté | rien | `{ id, role, prenom, nom }` (sert à restaurer la session après un rechargement) |
+| `POST /api/login` | public | `{ email, motDePasse }` | `{ token, utilisateur: { id, role, prenom, nom, specialite? } }` (`specialite` : praticien seulement) |
+| `GET /api/session` | connecté | rien | `{ id, role, prenom, nom, specialite? }` (restaure la session après un rechargement) |
 | `GET /api/parcours` | connecté | rien | liste des parcours avec leurs étapes ordonnées (alimente les filtres) |
 | `GET /api/praticiens` | praticien | rien | annuaire : `{ id, prenom, nom, email, specialite }` |
 | `GET /api/patients` | praticien | filtres facultatifs `statut`, `etape`, `parcours`, `q` | liste des patients (voir 2.4) |
 | `GET /api/patients/:id` | praticien | rien | dossier complet d'un patient (voir 2.4) |
 | `GET /api/moi/dossier` | patient | rien | son propre dossier, **notes partagées seulement**, **sans e-mails des praticiens** |
-| `PATCH /api/patients/:id/etapes/:idEtape` | praticien | `{ statut: "en_cours" ou "realisee" }` | `{ statut }` |
+| `PATCH /api/patients/:id/etapes/:idEtape` | praticien (spécialité de l'étape) | `{ statut: "en_cours" ou "realisee" }` | `{ statut }` |
 | `POST /api/patients/:id/seances` | praticien | `{ dateHeure, idEtape? }` | 201 `{ id }` |
 | `POST /api/patients/:id/notes` | praticien | `{ contenu, visiblePatient? }` | 201 `{ id, contenu, dateCreation, visiblePatient }` |
 
@@ -85,6 +88,7 @@ Le patient n'a **pas** besoin de fournir son identifiant : `GET /api/moi/dossier
 ### 2.5 Règles métier
 
 **Étapes** (`PATCH .../etapes/:idEtape`), exécutées dans une transaction :
+- le praticien doit avoir la spécialité attendue par l'étape (sinon **403**, contrôlé avant la transition) ;
 - transitions autorisées : `a_venir` → `en_cours` → `realisee` ; toute autre transition renvoie **409** ;
 - **une seule étape en cours** à la fois par patient (sinon 409) ;
 - terminer une étape enregistre la date de réalisation et **démarre automatiquement la suivante** ;
@@ -108,9 +112,10 @@ Le patient n'a **pas** besoin de fournir son identifiant : `GET /api/moi/dossier
 |---|---|---|
 | 400 | requête invalide | `Requête invalide` (dont JSON mal formé), `Identifiant invalide`, `Statut invalide`, `Étape invalide`, `Parcours invalide`, `Recherche invalide`, `Date invalide (elle doit être dans le futur)`, `Étape hors du parcours du patient`, `Note invalide (1 à 2000 caractères)` |
 | 401 | non connecté ou jeton invalide | `Non authentifié`, `Session invalide ou expirée`, `Session invalide`, `Identifiants invalides` |
-| 403 | mauvais rôle | `Accès refusé` |
+| 403 | droits insuffisants | `Accès refusé`, `Cette étape est réservée : <spécialité>` |
 | 404 | introuvable | `Patient introuvable`, `Dossier introuvable`, `Étape introuvable pour ce patient`, `Page introuvable` (route `/api/...` inconnue) |
 | 409 | conflit avec une règle métier | `Transition impossible : ...`, `Une autre étape est déjà en cours` |
+| 429 | trop d'échecs de connexion | `Trop de tentatives échouées. Réessayez dans N minute(s).` |
 | 500 | erreur serveur | `Erreur serveur` (le détail reste dans les logs) |
 
 Toutes les erreurs de l'API sont renvoyées en JSON sous la forme `{ "erreur": "..." }` (seule exception : `/api/health`, qui renvoie `{ "status": ... }`).
@@ -199,12 +204,12 @@ Chaque règle est contrôlée à plusieurs niveaux : le navigateur guide l'utili
 | `main.jsx` | point d'entrée : polices, thème, routeur, session |
 | `App.jsx` | table des routes |
 | `api.js` | appels à l'API : ajoute le jeton, gère les erreurs, signale une session expirée |
-| `auth/AuthContext.jsx` | utilisateur connecté, connexion, déconnexion, restauration de session |
+| `auth/` | `AuthContext.jsx` (fournisseur : connexion, déconnexion, restauration de session), `useAuth.js`, `contexte.js` |
 | `theme.js` | les trois thèmes et leur mémorisation |
 | `formulaire.js` | libellés des questions et de leurs options, infos clés, points d'attention |
-| `format.js` | dates en français |
+| `tools/` | `dateFormat.js` (dates en français), `statuts.js` (libellés de statut) |
 | `pdf/questionnairePdf.js` | génération du PDF du questionnaire |
-| `components/` | briques de mise en page : `Bande`, `Carte`, `Pastille`, `Tuile`, `Statuts`, `Layout`, `RouteProtegee`, `AnnuairePraticiens`, `SelecteurTheme` |
+| `components/` | briques de mise en page : `Bande`, `Carte`, `Pastille`, `Tuile`, `Statuts`, `Layout`, `RouteProtegee`, `Chargement`, `AnnuairePraticiens`, `SelecteurTheme` |
 | `components/fiche/` | blocs du dossier : `EtapesParcours`, `NotesSuivi`, `Seances`, `InfosFormulaire` |
 | `pages/` | `Connexion`, `Accueil`, `praticien/ListePatients`, `praticien/FichePatient`, `patient/MonParcours` |
 
@@ -224,14 +229,14 @@ Chaque règle est contrôlée à plusieurs niveaux : le navigateur guide l'utili
 ### 5.3 Session
 
 - Le jeton est conservé dans le `localStorage`.
-- Au chargement, si un jeton existe, le front appelle `GET /api/session` pour retrouver l'utilisateur. Pendant ce temps, seul un message « Chargement… » s'affiche (pas de saut de mise en page).
+- Au chargement, si un jeton existe, le front appelle `GET /api/session` pour retrouver l'utilisateur. Pendant ce temps, un écran de chargement s'affiche (logo qui pulse ; après 4 s, un message indique que le serveur se réveille).
 - Toute réponse **401** de l'API efface le jeton et renvoie à la connexion.
 
 ### 5.4 Ce que fait chaque écran
 
 **Liste des patients** : quatre tuiles de chiffres qui servent aussi de filtres, recherche, filtres statut et étape, tableau (statut, progression, prochaine séance). **Chaque ligne est cliquable** : le nom est un vrai lien étendu à toute la ligne, donc le clic, le clic milieu (nouvel onglet) et le clavier fonctionnent. Un bouton « Ouvrir → » et une phrase d'aide l'indiquent. Sous 768 px, le tableau devient une liste de cartes. Un annuaire de tous les praticiens, avec leur e-mail, est affiché en bas.
 
-**Fiche patient** : identité et objectif, étapes (boutons Démarrer et Terminer), notes (avec la case « visible par le patient »), séances (planification), praticiens impliqués avec leur e-mail, questionnaire (infos clés, points d'attention, toutes les réponses, téléchargement PDF).
+**Fiche patient** : identité et objectif, étapes (boutons Démarrer et Terminer, limités aux étapes de la spécialité du praticien connecté), notes (avec la case « visible par le patient »), séances (planification), praticiens impliqués avec leur e-mail, questionnaire (infos clés, points d'attention, toutes les réponses, téléchargement PDF).
 
 **Mon parcours (patient)** : progression, prochaine séance, étapes en lecture seule, messages partagés par les praticiens, équipe (sans e-mails), séances, questionnaire ou bouton vers Evalandgo s'il n'est pas rempli, téléchargement PDF.
 
@@ -245,7 +250,9 @@ Chaque règle est contrôlée à plusieurs niveaux : le navigateur guide l'utili
 
 - **Trois thèmes** : PrépaMarathon (par défaut, palette du site), Clair, Sombre. Le choix est mémorisé.
 - **Trois polices** : Oswald (titres), Libre Baskerville (textes rédigés), Verdana (interface). Oswald et Libre Baskerville sont hébergées avec l'application.
-- **Mise en page** : bandes pleine largeur, cartes à contour et ombre décalée, pastilles, tuiles inclinées, étapes en cartes numérotées.
+- **Mise en page** : bandes pleine largeur, cartes à contour et ombre décalée, pastilles, tuiles inclinées, étapes en cartes numérotées (1 à 5 colonnes selon la largeur).
+- **Icônes** (lucide-react) : statuts, badges de séance et de notes (privée en orange, partagée en vert), tuiles, progression. Toujours accompagnées d'un libellé.
+- **Mouvement** : écran de chargement, animation d'entrée des pages, apparition des sections au défilement. Tout est désactivé si le système demande moins de mouvement.
 - **Accessibilité** : statuts jamais portés par la couleur seule, contrastes vérifiés, focus clavier visible, lien « Aller au contenu », labels sur tous les champs, messages annoncés (`aria-live`), animations désactivées si le système le demande.
 
 ---
@@ -267,33 +274,28 @@ Un service Web Render relié au dépôt GitHub : il compile le front, installe l
 
 ## 8. Tests automatisés (back)
 
-- **Outils** : Vitest et Supertest, lancés avec `npm test` dans `back/`. Les tests appellent l'application Express directement (sans démarrer de serveur) et interrogent une vraie base MySQL.
-- **147 tests dans 6 fichiers**, exécutés l'un après l'autre.
+Vitest et Supertest, lancés avec `npm test` dans `back/`. Les tests appellent l'application Express sans démarrer de serveur et interrogent une vraie base MySQL. **160 tests, 7 fichiers**, exécutés l'un après l'autre.
 
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
-| `auth.test.js` | 29 | santé de l'API, connexion (mauvais identifiants, entrées invalides, injection), validation du jeton (autre secret, expiré, autre algorithme, `alg: none`) |
+| `auth.test.js` | 30 | santé de l'API, connexion (identifiants, entrées invalides, injection), jeton (autre secret, expiré, autre algorithme, `alg: none`), spécialité du profil |
+| `limiteConnexion.test.js` | 9 | 3 échecs puis 429, `Retry-After`, comptes et IP indépendants, e-mail inconnu, remise à zéro, levée du blocage après 5 minutes |
 | `droits.test.js` | 10 | 401 sans jeton, 403 pour le mauvais rôle sur chaque route, un refus n'a aucun effet |
-| `confidentialite.test.js` | 10 | le patient ne voit ni les notes privées ni les e-mails des praticiens, et uniquement son propre dossier |
-| `patients.test.js` | 46 | liste, filtres, recherche (jokers SQL, injection), dossier, types des données, cohérence des étapes |
-| `etapes.test.js` | 17 | transitions d'étapes, une seule étape en cours, démarrage automatique de la suivante, fin de parcours, refus sans effet |
-| `ecritures.test.js` | 35 | création de séances et de notes : validation, auteur = utilisateur connecté, heures stockées en UTC |
+| `confidentialite.test.js` | 10 | le patient ne voit ni les notes privées ni les e-mails des praticiens, uniquement son dossier |
+| `patients.test.js` | 46 | liste, filtres, recherche (jokers SQL, injection), dossier, types, cohérence des étapes |
+| `etapes.test.js` | 20 | transitions, une seule étape en cours, démarrage automatique de la suivante, étapes réservées à une spécialité |
+| `ecritures.test.js` | 35 | séances et notes : validation, auteur = utilisateur connecté, heures stockées en UTC |
 
-**Base de test.** Les tests utilisent un schéma séparé (`via_sana_test`). Ils commencent par rejouer le seed, qui vide toutes les tables. Le nom du schéma vient de `back/.env.test` (`DB_NAME` et `JWT_SECRET` ; l'hôte et les identifiants sont repris de `.env`). `.env.test.example` sert de modèle et `.env.test` n'est pas commité.
-
-**Garde-fou.** Les tests refusent de démarrer si `DB_NAME` ne contient pas « test » : la base de démonstration ne peut pas être vidée par erreur.
-
-**Contrôle des tests.** Le code a été cassé volontairement de 19 façons (par exemple en montrant les notes privées au patient, ou en retirant `timezone: 'Z'`) : à chaque fois, au moins un test échouait.
-
-**Bugs trouvés en écrivant les tests.** `/api/health` répondait 404 (route déclarée après le 404 JSON de `/api`) et un JSON mal formé répondait 500 au lieu de 400. Les deux sont corrigés dans `src/app.js`.
-
-**Ce que les tests ne couvrent pas.** Le front (aucun test automatisé), les contraintes de la base (vérifiées seulement indirectement), la charge, et l'accessibilité de la version en ligne.
+- **Base de test** : schéma séparé (`via_sana_test`), nom lu dans `back/.env.test` (`DB_NAME`, `JWT_SECRET` ; hôte et identifiants repris de `.env`). Le seed, qui vide toutes les tables, est rejoué avant chaque exécution.
+- **Garde-fou** : les tests refusent de démarrer si `DB_NAME` ne contient pas « test ».
+- **Efficacité** : 27 régressions injectées volontairement (droits, confidentialité, transitions, UTC, limite de connexion, restriction par spécialité…) sont toutes détectées par au moins un test.
+- **Hors périmètre** : le front (aucun test automatisé), les contraintes de la base (vérifiées indirectement), la charge.
 
 ## 9. Limites connues
 
 - Le formulaire n'est pas saisi dans l'application : les réponses sont seedées (le vrai flux passerait par Evalandgo).
-- Un praticien peut modifier n'importe quel patient : pas de droits par équipe.
-- Pas de limitation du nombre de tentatives de connexion ; jeton stocké dans le navigateur.
+- Un praticien peut consulter et annoter n'importe quel patient (pas de droits par équipe) ; seules les étapes sont limitées à sa spécialité.
+- Limite de connexion en mémoire (remise à zéro au redémarrage, non partagée entre instances) ; jeton stocké dans le navigateur.
 - En-têtes de sécurité HTTP (CSP, HSTS…) non configurés côté Express : à ajouter en production.
 - Coordonnées des praticiens : e-mail uniquement (pas de téléphone en base).
 - Tests automatisés sur le back uniquement : le front n'en a pas.

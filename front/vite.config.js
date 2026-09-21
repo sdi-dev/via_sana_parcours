@@ -11,11 +11,9 @@ export default defineConfig({
       "@": "/src",
       "@components": "/src/components",
       "@pages": "/src/pages",
-      "@assets": "/src/assets",
       "@utils": "/src/tools",
       "@auth": "/src/auth",
       "@pdf": "/src/pdf",
       "@api": "/src/api",
-      "@public": "../public",
     } },
 })

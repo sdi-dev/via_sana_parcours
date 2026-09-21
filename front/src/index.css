@@ -168,7 +168,23 @@
   button.tuile[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--color-base-100), 0 0 0 6px var(--color-base-content); }
 
   /* Étapes du parcours : cartes numérotées en chiffres creux */
-  .grille-etapes { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); list-style: none; padding: 0; }
+  /* Étapes : 1 colonne sur mobile, 2 sur petit écran, 3 puis 2 en pleine largeur sur tablette,
+     puis une colonne par étape (5 au maximum) sur ordinateur : toute la largeur est utilisée */
+  .grille-etapes { display: grid; gap: 1.25rem; grid-template-columns: 1fr; list-style: none; padding: 0; }
+  @media (min-width: 40rem) and (max-width: 47.99rem) {
+    .grille-etapes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grille-etapes > li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  }
+  @media (min-width: 48rem) and (max-width: 63.99rem) {
+    .grille-etapes { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .grille-etapes > li { grid-column: span 2; }
+    .grille-etapes > li:nth-last-child(2):nth-child(3n + 1),
+    .grille-etapes > li:last-child:nth-child(3n + 2) { grid-column: span 3; }
+    .grille-etapes > li:last-child:nth-child(3n + 1) { grid-column: 1 / -1; }
+  }
+  @media (min-width: 64rem) {
+    .grille-etapes { grid-template-columns: repeat(var(--colonnes, 5), minmax(0, 1fr)); }
+  }
   .etape-carte {
     display: flex;
     flex-direction: column;
@@ -211,6 +227,12 @@
   .statut-realise { background: var(--color-accent); color: var(--color-accent-content); }
   .statut-en-cours { background: var(--color-primary); color: var(--color-primary-content); }
   .statut-a-venir { border-color: currentColor; background: transparent; }
+
+  /* Écran d'attente */
+  .chargement { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 2rem; text-align: center; }
+  .chargement-logo { font-size: 2rem; }
+  .chargement-barre { position: relative; display: block; width: 9rem; height: 0.35rem; overflow: hidden; border-radius: 9999px; background: color-mix(in oklab, var(--color-base-content) 15%, transparent); }
+  .chargement-barre::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: inherit; background: var(--color-primary); }
 
   .liste-puces { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
   .liste-puces li::before {
@@ -323,6 +345,26 @@ input.input, select.select, textarea.textarea, input.checkbox {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+@keyframes pulsation-logo {
+  0%, 100% { opacity: 1; scale: 1; }
+  50% { opacity: 0.55; scale: 0.96; }
+}
+@keyframes glisse {
+  from { translate: -110% 0; }
+  to { translate: 260% 0; }
+}
+@keyframes entree-page {
+  from { opacity: 0; translate: 0 14px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes fondu-entree {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes descente-entete {
+  from { opacity: 0; translate: 0 -14px; }
+  to { opacity: 1; translate: 0 0; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .carte, .tuile, .etape-carte { animation: apparition 0.45s ease-out both; }
   .tuile:nth-child(2), .etape-carte:nth-child(2) { animation-delay: 0.06s; }
@@ -331,5 +373,31 @@ input.input, select.select, textarea.textarea, input.checkbox {
   .etape-carte:nth-child(5) { animation-delay: 0.24s; }
   .statut-en-cours > span[aria-hidden="true"] { animation: pulsation 1.8s ease-in-out infinite; }
   .btn { transition: transform 0.1s ease; }
+
+  /* Écran d'attente */
+  .chargement-logo { animation: pulsation-logo 1.6s ease-in-out infinite; }
+  .chargement-barre::after { animation: glisse 1.3s ease-in-out infinite; }
+
+  /* Entrée dans l'application (surtout de la connexion vers l'accueil) et changement de page.
+     fill-mode « backwards » : rien ne reste appliqué une fois l'animation terminée */
+  .layout-entree { animation: fondu-entree 0.45s ease-out backwards; }
+  .layout-entree > header { animation: descente-entete 0.5s ease-out backwards; }
+  .page-entree { animation: entree-page 0.4s ease-out backwards; }
+
+  /* Page de connexion : les éléments du bloc d'accroche arrivent l'un après l'autre */
+  .cascade > * { animation: apparition 0.5s ease-out both; }
+  .cascade > :nth-child(2) { animation-delay: 0.08s; }
+  .cascade > :nth-child(3) { animation-delay: 0.16s; }
+  .cascade > :nth-child(4) { animation-delay: 0.24s; }
+
+  /* Sections sous la ligne de flottaison : apparition à l'entrée à l'écran (voir Bande.jsx).
+     Les animations des cartes, tuiles et étapes sont mises en pause jusque-là. */
+  .bande[data-apparition] > .conteneur { transition: opacity 0.6s ease-out, translate 0.6s ease-out; }
+  .bande[data-apparition="attente"] > .conteneur { opacity: 0; translate: 0 24px; }
+  .bande[data-apparition="attente"] :is(.carte, .tuile, .etape-carte) { animation-play-state: paused; }
+
+  /* Tuiles-filtres : léger agrandissement au survol */
+  button.tuile { transition: transform 0.15s ease; }
+  button.tuile:hover { transform: rotate(var(--rot, 0deg)) scale(1.04); }
   .btn:active:not(:disabled) { transform: translateY(1px); }
 }

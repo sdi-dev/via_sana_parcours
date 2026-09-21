@@ -1,16 +1,19 @@
-const { api, connexion, idPatient, dossier, PRATICIEN } = require('./aide');
+const { api, connexion, idPatient, dossier, PRATICIEN, AUTRE_PRATICIEN } = require('./aide');
 
 // Ce fichier fait avancer Sophie Lambert (au départ : étape 1 en cours, les 4 autres à venir)
-// et utilise Karim Benali pour vérifier qu'un refus ne modifie rien.
-let praticien, idSophie, idKarim, etapes; // etapes = ids des 5 étapes, dans l'ordre
+// Karim Benali sert à vérifier qu'un refus ne modifie rien, Thomas Girard aux étapes réservées.
+// Sam Lefèvre est kiné, Alex Garnier coordinateur de soins.
+let praticien, alex, idSophie, idKarim, idThomas, etapes; // etapes = ids des 5 étapes, dans l'ordre
 
-const patch = (id, idEtape, corps) => api().patch(`/api/patients/${id}/etapes/${idEtape}`).set(praticien.entetes).send(corps);
+const patch = (id, idEtape, corps, acteur = praticien) => api().patch(`/api/patients/${id}/etapes/${idEtape}`).set(acteur.entetes).send(corps);
 const statuts = async (id) => (await dossier(praticien, id)).etapes.map((e) => e.statut);
 
 beforeAll(async () => {
   praticien = await connexion(PRATICIEN);
   idSophie = await idPatient(praticien, 'Lambert');
   idKarim = await idPatient(praticien, 'Benali');
+  idThomas = await idPatient(praticien, 'Girard');
+  alex = await connexion(AUTRE_PRATICIEN);
   etapes = (await api().get('/api/parcours').set(praticien.entetes)).body[0].etapes.map((e) => e.id);
 });
 
@@ -35,8 +38,8 @@ describe('Transitions d’étapes (patient : Sophie Lambert)', () => {
     expect(await statuts(idSophie)).toEqual(['en_cours', 'a_venir', 'a_venir', 'a_venir', 'a_venir']);
   });
 
-  it('terminer l’étape 1 la marque réalisée, date la réalisation et démarre automatiquement l’étape 2', async () => {
-    const r = await patch(idSophie, etapes[0], { statut: 'realisee' });
+  it('terminer l’étape 1 (sans spécialité attendue, ici par le coordinateur) la marque réalisée, date la réalisation et démarre l’étape 2', async () => {
+    const r = await patch(idSophie, etapes[0], { statut: 'realisee' }, alex);
     expect(r.status).toBe(200);
     expect(r.body).toEqual({ statut: 'realisee' });
     const d = await dossier(praticien, idSophie);
@@ -85,7 +88,7 @@ describe('Transitions d’étapes (patient : Sophie Lambert)', () => {
 
   it('on peut mener le parcours jusqu’au bout : à la fin, statut « termine » et plus aucune étape en cours', async () => {
     for (let i = 1; i < 5; i++) {
-      const r = await patch(idSophie, etapes[i], { statut: 'realisee' });
+      const r = await patch(idSophie, etapes[i], { statut: 'realisee' }, i === 4 ? alex : praticien); // l'étape 5 est celle du coordinateur
       expect(r.status, `étape ${i + 1}`).toBe(200);
       const attendu = Array.from({ length: 5 }, (_, k) => (k <= i ? 'realisee' : k === i + 1 ? 'en_cours' : 'a_venir'));
       expect(await statuts(idSophie), `après l'étape ${i + 1}`).toEqual(attendu);
@@ -95,8 +98,30 @@ describe('Transitions d’étapes (patient : Sophie Lambert)', () => {
   });
 
   it('une fois le parcours terminé, plus aucune transition n’est possible (409)', async () => {
-    expect((await patch(idSophie, etapes[4], { statut: 'realisee' })).status).toBe(409);
-    expect((await patch(idSophie, etapes[4], { statut: 'en_cours' })).status).toBe(409);
+    expect((await patch(idSophie, etapes[4], { statut: 'realisee' }, alex)).status).toBe(409);
+    expect((await patch(idSophie, etapes[4], { statut: 'en_cours' }, alex)).status).toBe(409);
+  });
+});
+
+describe('Étapes réservées à une spécialité (patient : Thomas Girard, étape 4 en cours)', () => {
+  it('le coordinateur ne peut pas terminer l’étape du kiné (403), et rien ne change', async () => {
+    const avant = (await dossier(praticien, idThomas)).etapes;
+    const r = await patch(idThomas, etapes[3], { statut: 'realisee' }, alex);
+    expect(r.status).toBe(403);
+    expect(r.body.erreur).toBe('Cette étape est réservée : kinésithérapeute');
+    expect((await dossier(praticien, idThomas)).etapes).toEqual(avant);
+  });
+
+  it('le kiné ne peut ni démarrer ni terminer l’étape du coordinateur (403 avant tout contrôle de transition)', async () => {
+    expect((await patch(idThomas, etapes[4], { statut: 'en_cours' })).status).toBe(403);
+    expect((await patch(idThomas, etapes[4], { statut: 'realisee' })).status).toBe(403);
+  });
+
+  it('le kiné termine son étape, ce qui démarre celle du coordinateur, qui la termine à son tour', async () => {
+    expect((await patch(idThomas, etapes[3], { statut: 'realisee' })).status).toBe(200);
+    expect((await dossier(praticien, idThomas)).etapes[4].statut).toBe('en_cours');
+    expect((await patch(idThomas, etapes[4], { statut: 'realisee' }, alex)).status).toBe(200);
+    expect((await dossier(praticien, idThomas)).etapes.every((e) => e.statut === 'realisee')).toBe(true);
   });
 });
 

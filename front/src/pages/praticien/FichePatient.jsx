@@ -1,16 +1,18 @@
+import { CalendarClock, ListChecks, Route as IconeParcours, StickyNote } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { appeler } from '@api';
-import { useAuth } from '@auth/AuthContext';
+import { useAuth } from '@auth/useAuth';
 import { dateCourte, dateSeule, heure } from '@utils/dateFormat.js';
 import Bande from '@components/Bande';
+import Chargement from '@components/Chargement';
 import Carte from '@components/Carte';
 import EtapesParcours from '@components/fiche/EtapesParcours';
 import InfosFormulaire from '@components/fiche/InfosFormulaire';
 import NotesSuivi from '@components/fiche/NotesSuivi';
 import Seances from '@components/fiche/Seances';
 import Pastille from '@components/Pastille';
-import { libelleStatutPatient } from '@components/Statuts';
+import { libelleStatutPatient } from '@utils/statuts.js';
 import Tuile from '@components/Tuile';
 
 const SEXE = { femme: 'Femme', homme: 'Homme', autre: 'Autre' };
@@ -64,7 +66,7 @@ export default function FichePatient() {
       </Bande>
     );
   }
-  if (!dossier) return <Bande ton="creme"><p role="status">Chargement…</p></Bande>;
+  if (!dossier) return <Bande ton="creme"><Chargement className="min-h-96" /></Bande>;
 
   const total = dossier.etapes.length;
   const realisees = dossier.etapes.filter((e) => e.statut === 'realisee').length;
@@ -76,7 +78,7 @@ export default function FichePatient() {
       <Bande ton="creme">
         <Link to="/praticien" className="btn btn-sm btn-neutral">← Patients</Link>
         <div className="mt-6">
-          <Pastille>{dossier.parcours} · {libelleStatutPatient(statut)}</Pastille>
+          <Pastille icone={IconeParcours}>{dossier.parcours} · {libelleStatutPatient(statut)}</Pastille>
         </div>
         <h1 className="titre-hero mt-4">{dossier.prenom} <em>{dossier.nom}</em></h1>
         <p className="chapo mt-5 font-texte">
@@ -88,10 +90,10 @@ export default function FichePatient() {
         </p>
 
         <div className="mt-8 flex flex-wrap gap-5">
-          <Tuile ton="orange" valeur={`${realisees}/${total}`} libelle="étapes réalisées" inclinaison={-2} />
+          <Tuile ton="orange" valeur={`${realisees}/${total}`} libelle="étapes réalisées" icone={ListChecks} inclinaison={-2} />
           <Tuile ton="vert" valeur={prochaine ? dateCourte(prochaine.dateHeure) : '—'}
-            libelle={prochaine ? `prochaine séance · ${heure(prochaine.dateHeure)}` : 'aucune séance prévue'} inclinaison={1.5} />
-          <Tuile ton="bleu" valeur={dossier.notes.length} libelle="notes de suivi" inclinaison={-1} />
+            libelle={prochaine ? `prochaine séance · ${heure(prochaine.dateHeure)}` : 'aucune séance prévue'} icone={CalendarClock} inclinaison={1.5} />
+          <Tuile ton="bleu" valeur={dossier.notes.length} libelle="notes de suivi" icone={StickyNote} inclinaison={-1} />
         </div>
 
         <div aria-live="polite" className="mt-6 empty:hidden">
@@ -100,7 +102,8 @@ export default function FichePatient() {
       </Bande>
 
       <Bande ton="vert">
-        <EtapesParcours etapes={dossier.etapes} editable occupe={occupe} onChangerStatut={changerStatut} />
+        <EtapesParcours etapes={dossier.etapes} editable occupe={occupe} onChangerStatut={changerStatut}
+          specialiteUtilisateur={utilisateur.specialite} />
       </Bande>
 
       <Bande ton="sable">

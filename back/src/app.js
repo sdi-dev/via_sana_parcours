@@ -6,6 +6,8 @@ const pool = require('./db');
 if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET manquant');
 
 const app = express();
+// Derrière le proxy de Render : req.ip doit être l'adresse du visiteur (utilisée par la limite de connexion)
+app.set('trust proxy', 1);
 app.use(express.json());
 
 // Doit rester AVANT le 404 de /api, sinon /api/health renvoie « Page introuvable »
